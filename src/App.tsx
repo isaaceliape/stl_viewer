@@ -9,6 +9,23 @@ function App() {
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [selectedModel, setSelectedModel] = useState<ModelInfo | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [viewerVisible, setViewerVisible] = useState<boolean>(true);
+  const [gridView, setGridView] = useState<boolean>(false);
+  const [sortBy, setSortBy] = useState<'name' | 'size' | 'modified'>('name');
+
+  // Sort models based on current sort option
+  const sortedModels = [...models].sort((a, b) => {
+    switch (sortBy) {
+      case 'name':
+        return a.name.localeCompare(b.name);
+      case 'size':
+        return (b.size || 0) - (a.size || 0); // Largest first
+      case 'modified':
+        return new Date(b.modified || 0).getTime() - new Date(a.modified || 0).getTime(); // Newest first
+      default:
+        return 0;
+    }
+  });
 
   useEffect(() => {
     loadLastFolder();
@@ -56,9 +73,38 @@ function App() {
     <div className="app-container">
       <header className="app-header">
         <h1>🎨 STL/3MF Gallery Viewer</h1>
-        <button onClick={handleSelectFolder} className="folder-btn">
-          📁 Change Folder
-        </button>
+        <div className="header-buttons">
+          <button onClick={handleSelectFolder} className="folder-btn">
+            📁 Change Folder
+          </button>
+          <div className="sort-dropdown">
+            <label htmlFor="sort-select">Sort by:</label>
+            <select
+              id="sort-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'name' | 'size' | 'modified')}
+              className="sort-select"
+            >
+              <option value="name">Name (A-Z)</option>
+              <option value="size">Size (Largest)</option>
+              <option value="modified">Date (Newest)</option>
+            </select>
+          </div>
+          <button 
+            onClick={() => setGridView(!gridView)}
+            className={`view-toggle-btn ${gridView ? 'active' : ''}`}
+            title={gridView ? "Switch to list view" : "Switch to grid view"}
+          >
+            {gridView ? "📋 List" : "⊞ Grid"}
+          </button>
+          <button 
+            onClick={() => setViewerVisible(!viewerVisible)}
+            className="toggle-viewer-btn"
+            title={viewerVisible ? "Hide preview" : "Show preview"}
+          >
+            {viewerVisible ? "◀ Hide Preview" : "▶ Show Preview"}
+          </button>
+        </div>
       </header>
 
       {folderPath && (
@@ -70,23 +116,26 @@ function App() {
       {loading && <div className="loading">Loading models...</div>}
 
       <div className="main-layout">
-        <div className="grid-section">
+        <div className={`grid-section ${!viewerVisible ? 'full-width' : ''}`}>
           <ModelGrid
-            models={models}
+            models={sortedModels}
             selectedModel={selectedModel}
             onSelectModel={setSelectedModel}
             loading={loading}
+            gridView={gridView}
           />
         </div>
-        <div className="viewer-section">
-          {selectedModel ? (
-            <ModelViewer key={selectedModel.path} modelData={selectedModel} />
-          ) : (
-            <div className="viewer-placeholder">
-              <p>Select a model to view</p>
-            </div>
-          )}
-        </div>
+        {viewerVisible && (
+          <div className="viewer-section">
+            {selectedModel ? (
+              <ModelViewer key={selectedModel.path} modelData={selectedModel} />
+            ) : (
+              <div className="viewer-placeholder">
+                <p>Select a model to view</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

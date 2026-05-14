@@ -21,6 +21,8 @@ export interface ModelInfo {
   name: string;
   path: string;
   ext: string;
+  size?: number;
+  modified?: string;
 }
 
 export interface FileStats {

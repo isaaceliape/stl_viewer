@@ -451,11 +451,11 @@ export async function generateThumbnail(modelPath: string, ext: string): Promise
 
     // Create offscreen renderer
     const canvas = document.createElement('canvas');
-    canvas.width = 128;
-    canvas.height = 128;
+    canvas.width = 256;
+    canvas.height = 256;
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    renderer.setSize(128, 128);
+    renderer.setSize(256, 256);
     renderer.setClearColor(0x2a2a2a, 1);
 
     const scene = new THREE.Scene();

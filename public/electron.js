@@ -147,11 +147,17 @@ ipcMain.handle('list-models', async (event, folderPath) => {
         const ext = path.extname(file).toLowerCase();
         return ext === '.stl' || ext === '.3mf';
       })
-      .map((file) => ({
-        name: file,
-        path: path.join(folderPath, file),
-        ext: path.extname(file).toLowerCase(),
-      }));
+      .map((file) => {
+        const fullPath = path.join(folderPath, file);
+        const stats = fs.statSync(fullPath);
+        return {
+          name: file,
+          path: fullPath,
+          ext: path.extname(file).toLowerCase(),
+          size: stats.size,
+          modified: stats.mtime.toISOString(),
+        };
+      });
     return models;
   } catch (error) {
     console.error('Error listing models:', error);

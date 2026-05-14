@@ -8,6 +8,7 @@ interface ModelGridProps {
   selectedModel: ModelInfo | null;
   onSelectModel: (model: ModelInfo | null) => void;
   loading: boolean;
+  gridView: boolean;
 }
 
 interface ThumbnailState {
@@ -18,8 +19,34 @@ interface LoadingThumbnailState {
   [path: string]: boolean;
 }
 
-function ModelGrid({ models, selectedModel, onSelectModel, loading }: ModelGridProps) {
+function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView }: ModelGridProps) {
   const [thumbnails, setThumbnails] = useState<ThumbnailState>({});
+
+  const formatFileSize = (bytes?: number): string => {
+    if (!bytes && bytes !== 0) return 'Unknown size';
+    if (bytes === 0) return '0 B';
+
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const unitIndex = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+    const value = bytes / Math.pow(1024, unitIndex);
+
+    return `${value >= 10 || unitIndex === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
+  };
+
+  const formatModifiedDate = (modified?: string): string => {
+    if (!modified) return 'Unknown date';
+
+    return new Intl.DateTimeFormat(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(new Date(modified));
+  };
+
+  const getFolderName = (modelPath: string): string => {
+    const parts = modelPath.split(/[\\/]/);
+    return parts.length > 1 ? parts[parts.length - 2] : 'Local file';
+  };
   const [loadingThumbnails, setLoadingThumbnails] = useState<LoadingThumbnailState>({});
   const thumbnailQueueRef = useRef<ModelInfo[]>([]);
   const processingRef = useRef<boolean>(false);
@@ -86,7 +113,7 @@ function ModelGrid({ models, selectedModel, onSelectModel, loading }: ModelGridP
           <p className="empty-hint">Click "📁 Change Folder" to browse</p>
         </div>
       ) : (
-        <div className="grid-items">
+        <div className={`grid-items ${gridView ? 'grid-view' : 'list-view'}`}>
           {models.map((model, index) => (
             <div
               key={index}
@@ -114,9 +141,18 @@ function ModelGrid({ models, selectedModel, onSelectModel, loading }: ModelGridP
               </div>
               <div className="item-info">
                 <h3 className="item-name" title={model.name}>
-                  {model.name.length > 30 ? model.name.substring(0, 27) + '...' : model.name}
+                  {model.name}
                 </h3>
-                <p className="item-ext">{model.ext.toUpperCase().replace('.', '')}</p>
+                <div className="item-meta-row">
+                  <span className="item-ext">{model.ext.toUpperCase().replace('.', '')}</span>
+                  <span className="item-size">{formatFileSize(model.size)}</span>
+                </div>
+                <div className="item-details">
+                  <span title={model.modified ? new Date(model.modified).toLocaleString() : undefined}>
+                    🕒 {formatModifiedDate(model.modified)}
+                  </span>
+                  <span title={model.path}>📁 {getFolderName(model.path)}</span>
+                </div>
               </div>
             </div>
           ))}
