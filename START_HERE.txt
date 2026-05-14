@@ -1,0 +1,175 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║                                                                      ║
+║                    🎨 STL VIEWER - START HERE                        ║
+║                                                                      ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+
+👋 WELCOME! Here's how to get your 3D model viewer up and running:
+
+
+STEP 1: Install Dependencies
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Open Terminal and run:
+
+    cd /Users/isaaceliape/repos/stl_viewer
+    npm install
+
+  This will download and install all required packages (~500MB).
+  Wait for it to complete (2-5 minutes).
+
+
+STEP 2: Start the App (Use tmux!)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  IMPORTANT: Always use tmux for the dev server!
+
+  Still in Terminal, run:
+
+    tmux new-session -d -s stl-viewer 'npm run dev'
+
+  This will:
+  ✓ Start React dev server in a tmux session
+  ✓ Launch Electron app
+  ✓ Open the window automatically
+  ✓ Keep server running even if terminal closes
+
+  To attach to the session (view logs):
+
+    tmux attach -t stl-viewer
+
+  To detach (keep running):
+
+    Ctrl+B then D
+
+
+STEP 3: Use the App
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. Look for the "📁 Change Folder" button in top right
+  2. Click it and select your 3D models folder
+     (Try: ~/Library/Mobile Documents/com~apple~CloudDocs/3D Printing/Models)
+  3. Models appear in the left panel
+  4. Click any model to see it in 3D on the right
+  5. Drag to rotate, scroll to zoom
+
+
+🎮 CONTROLS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  • DRAG MODEL          = Click and drag in the 3D view to rotate
+  • SCROLL              = Zoom in/out
+  • CLICK ON GRID ITEM  = Select model to view
+  • CHANGE FOLDER BTN   = Browse different folders
+
+
+📚 DOCUMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Read these files for more info:
+
+  • QUICK_REFERENCE.md      → Commands cheat sheet (5 min read)
+  • SETUP.md                → Detailed setup & troubleshooting
+  • README.md               → Features & technical overview
+  • PROJECT_SUMMARY.md      → Complete architecture guide
+
+
+⚠️  FIRST TIME ISSUES?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  "npm: command not found"
+  → Install Node.js from nodejs.org
+
+  "Port 3000 already in use"
+  → Kill process: lsof -i :3000  then  kill -9 <PID>
+
+  "Models not showing"
+  → Check file extensions (.stl or .3mf)
+  → Try a different folder
+
+  "3D viewer is blank"
+  → Try a different model file
+  → Check GPU drivers are updated
+
+
+🔧 USEFUL COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  npm run dev              → Start with hot reload (development)
+  npm run build            → Create production build
+  npm run build-app        → Create installers for distribution
+  npm start                → Run production version
+  npm test                 → Run tests
+
+
+📂 PROJECT LAYOUT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  src/
+    App.js               ← Main app component
+    components/
+      ModelGrid.js       ← Left panel (grid of models)
+      ModelViewer.js     ← Right panel (3D viewer)
+
+  public/
+    electron.js          ← Desktop app logic
+    preload.js           ← Security bridge
+
+  package.json           ← Dependencies & scripts
+
+
+✨ FEATURES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✅ View STL files (binary & ASCII)
+  ✅ View 3MF files (with colors/materials)
+  ✅ Rotate & zoom with mouse
+  ✅ Browse multiple folders
+  ✅ File metadata (size, date, type)
+  ✅ On-demand loading (fast even with 100+ models)
+  ✅ Cross-platform (Mac, Windows, Linux)
+
+
+🎓 LEARNING TIPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. Get it running first (npm run dev)
+  2. Try viewing different models
+  3. Look at QUICK_REFERENCE.md
+  4. Read src/App.js to understand the layout
+  5. Customize colors in src/App.css
+  6. Explore ModelViewer.js to understand 3D rendering
+
+
+🚀 NEXT STEPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  → npm install                    (Install packages)
+  → tmux new-session -d -s stl-viewer 'npm run dev'  (Start in tmux!)
+  → Browse your 3D model folder   (Use it!)
+  → Explore the code               (Customize it!)
+  → npm run build-app              (Share it!)
+
+
+📞 NEED HELP?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Check SETUP.md for troubleshooting
+  Read comments in src/ files for details
+  Review configuration in package.json
+
+
+════════════════════════════════════════════════════════════════════════
+
+Ready to view your 3D models? Start here:
+
+  cd /Users/isaaceliape/repos/stl_viewer
+  npm install
+  tmux new-session -d -s stl-viewer 'npm run dev'
+
+  (Attach to view logs: tmux attach -t stl-viewer)
+
+Enjoy! 🎨✨
+
+════════════════════════════════════════════════════════════════════════
