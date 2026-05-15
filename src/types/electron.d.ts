@@ -38,6 +38,7 @@ export interface UserPreferences {
   gridView: boolean;
   viewerVisible: boolean;
   sortBy: 'name' | 'size' | 'modified';
+  sortOrder: 'asc' | 'desc';
   previewBackgroundColor: string;
   thumbnailBackgroundColor: string;
   modelColor: string;

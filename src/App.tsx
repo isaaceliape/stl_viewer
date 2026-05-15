@@ -20,6 +20,7 @@ const defaultPreferences: UserPreferences = {
   gridView: false,
   viewerVisible: true,
   sortBy: 'name',
+  sortOrder: 'asc',
   previewBackgroundColor: '#1a1a1a',
   thumbnailBackgroundColor: '#2a2a2a',
   modelColor: '#4488ff',
@@ -36,19 +37,22 @@ function App() {
   const [activePage, setActivePage] = useState<ActivePage>('gallery');
   const [preferences, setPreferences] = useState<UserPreferences>(defaultPreferences);
 
-  const { gridView, viewerVisible, sortBy } = preferences;
+  const { gridView, viewerVisible, sortBy, sortOrder } = preferences;
 
   const sortedModels = [...models].sort((a, b) => {
+    let cmp = 0;
     switch (sortBy) {
       case 'name':
-        return a.name.localeCompare(b.name);
+        cmp = a.name.localeCompare(b.name);
+        break;
       case 'size':
-        return (b.size || 0) - (a.size || 0);
+        cmp = (a.size || 0) - (b.size || 0);
+        break;
       case 'modified':
-        return new Date(b.modified || 0).getTime() - new Date(a.modified || 0).getTime();
-      default:
-        return 0;
+        cmp = new Date(a.modified || 0).getTime() - new Date(b.modified || 0).getTime();
+        break;
     }
+    return sortOrder === 'asc' ? cmp : -cmp;
   });
 
   useEffect(() => {
@@ -309,6 +313,7 @@ function App() {
               gridView={gridView}
               preferences={preferences}
               onSortChange={(sort) => savePreferences({ sortBy: sort })}
+              onToggleSortOrder={() => savePreferences({ sortOrder: sortOrder === 'asc' ? 'desc' : 'asc' })}
               onToggleGridView={handleToggleGridView}
             />
           </div>

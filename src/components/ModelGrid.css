@@ -69,6 +69,22 @@
   color: #fff;
 }
 
+.grid-header-controls .sort-order-btn {
+  font-size: 14px;
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background: #fff;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.grid-header-controls .sort-order-btn:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
 /* ─── Filter pills ────────────────────────────────────────────── */
 .filter-pills-row {
   display: flex;

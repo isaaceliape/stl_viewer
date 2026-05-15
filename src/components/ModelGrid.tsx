@@ -12,6 +12,8 @@ import {
   faPrint,
   faClock,
   faTimes,
+  faSortAmountUp,
+  faSortAmountDown,
 } from '@fortawesome/free-solid-svg-icons';
 
 interface ModelGridProps {
@@ -22,6 +24,7 @@ interface ModelGridProps {
   gridView: boolean;
   preferences: UserPreferences;
   onSortChange: (sort: 'name' | 'size' | 'modified') => void;
+  onToggleSortOrder: () => void;
   onToggleGridView: () => void;
 }
 
@@ -35,7 +38,7 @@ interface LoadingThumbnailState {
 
 type FilterExt = '.stl' | '.3mf';
 
-function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView, preferences, onSortChange, onToggleGridView }: ModelGridProps) {
+function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView, preferences, onSortChange, onToggleSortOrder, onToggleGridView }: ModelGridProps) {
   const [thumbnails, setThumbnails] = useState<ThumbnailState>({});
   const [activeFilters, setActiveFilters] = useState<Set<FilterExt>>(new Set());
 
@@ -158,6 +161,13 @@ function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView, pr
             <option value="size">Size (Largest)</option>
             <option value="modified">Date (Newest)</option>
           </select>
+          <button
+            onClick={onToggleSortOrder}
+            className="sort-order-btn"
+            title={preferences.sortOrder === 'asc' ? 'Ascending — click for descending' : 'Descending — click for ascending'}
+          >
+            <FontAwesomeIcon icon={preferences.sortOrder === 'asc' ? faSortAmountUp : faSortAmountDown} />
+          </button>
           <button
             onClick={onToggleGridView}
             className={`view-toggle-btn ${gridView ? 'active' : ''}`}
