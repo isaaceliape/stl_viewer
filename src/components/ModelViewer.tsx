@@ -30,42 +30,90 @@ function ModelViewer({ modelData, preferences }: ModelViewerProps) {
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const meshRef = useRef<THREE.Group | null>(null);
   const animationIdRef = useRef<number>(0);
+  const renderRequestedRef = useRef<boolean>(false);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const loadRequestIdRef = useRef<number>(0);
   const controlsStateRef = useRef<ControlsState>({
     isDragging: false,
     isPanning: false,
     previousMouse: { x: 0, y: 0 }
   });
+  const renderInteractionRef = useRef<boolean>(false);
   
   const [info, setInfo] = useState<ModelInfoState | null>(null);
 
   useEffect(() => {
-    loadAndDisplayModel();
+    initializeViewer();
     return () => {
       cleanup();
     };
+  }, []);
+
+  useEffect(() => {
+    loadAndDisplayModel();
   }, [modelData]);
 
+  useEffect(() => {
+    updateSceneAppearance();
+  }, [preferences.previewBackgroundColor, preferences.modelColor]);
+
+  const disposeGroupResources = (group: THREE.Group): void => {
+    group.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+
+      object.geometry?.dispose();
+
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      materials.forEach((material) => material?.dispose());
+    });
+  };
+
+  const disposeCurrentModel = (): void => {
+    if (!meshRef.current) return;
+
+    if (sceneRef.current) {
+      sceneRef.current.remove(meshRef.current);
+    }
+
+    disposeGroupResources(meshRef.current);
+    meshRef.current = null;
+  };
+
   const cleanup = (): void => {
+    loadRequestIdRef.current += 1;
+
     if (animationIdRef.current) {
       cancelAnimationFrame(animationIdRef.current);
+      animationIdRef.current = 0;
     }
-    if (rendererRef.current) {
-      rendererRef.current.dispose();
-      if (mountRef.current && rendererRef.current.domElement) {
-        try {
-          mountRef.current.removeChild(rendererRef.current.domElement);
-        } catch (e) {
-          // Element may already be removed
-        }
-      }
+    renderRequestedRef.current = false;
+
+    if (resizeObserverRef.current) {
+      resizeObserverRef.current.disconnect();
+      resizeObserverRef.current = null;
     }
+
     // Remove event listeners
-    if (rendererRef.current && mountRef.current) {
-      mountRef.current.removeEventListener('mousedown', handleMouseDown);
-      mountRef.current.removeEventListener('mousemove', handleMouseMove);
-      mountRef.current.removeEventListener('mouseup', handleMouseUp);
+    if (mountRef.current) {
+      mountRef.current.removeEventListener('pointerdown', handlePointerDown);
+      mountRef.current.removeEventListener('pointermove', handlePointerMove);
+      mountRef.current.removeEventListener('pointerup', handlePointerUp);
+      mountRef.current.removeEventListener('pointercancel', handlePointerUp);
       mountRef.current.removeEventListener('wheel', handleWheel);
       mountRef.current.removeEventListener('contextmenu', handleContextMenu);
+    }
+
+    disposeCurrentModel();
+    sceneRef.current = null;
+    cameraRef.current = null;
+
+    if (rendererRef.current) {
+      const canvas = rendererRef.current.domElement;
+      rendererRef.current.dispose();
+      if (mountRef.current && canvas?.parentNode === mountRef.current) {
+        mountRef.current.removeChild(canvas);
+      }
+      rendererRef.current = null;
     }
   };
 
@@ -90,27 +138,31 @@ function ModelViewer({ modelData, preferences }: ModelViewerProps) {
   const parseBinarySTL = (view: DataView): THREE.BufferGeometry => {
     const triangles = view.getUint32(80, true);
     const geometry = new THREE.BufferGeometry();
-    const vertices: number[] = [];
-    const normals: number[] = [];
+    const vertices = new Float32Array(triangles * 9);
+    const normals = new Float32Array(triangles * 9);
 
     let offset = 84;
+    let attributeOffset = 0;
     for (let i = 0; i < triangles; i++) {
       const nx = view.getFloat32(offset, true); offset += 4;
       const ny = view.getFloat32(offset, true); offset += 4;
       const nz = view.getFloat32(offset, true); offset += 4;
 
       for (let j = 0; j < 3; j++) {
-        const vx = view.getFloat32(offset, true); offset += 4;
-        const vy = view.getFloat32(offset, true); offset += 4;
-        const vz = view.getFloat32(offset, true); offset += 4;
-        vertices.push(vx, vy, vz);
-        normals.push(nx, ny, nz);
+        vertices[attributeOffset] = view.getFloat32(offset, true); offset += 4;
+        vertices[attributeOffset + 1] = view.getFloat32(offset, true); offset += 4;
+        vertices[attributeOffset + 2] = view.getFloat32(offset, true); offset += 4;
+
+        normals[attributeOffset] = nx;
+        normals[attributeOffset + 1] = ny;
+        normals[attributeOffset + 2] = nz;
+        attributeOffset += 3;
       }
       offset += 2; // attribute byte count
     }
 
-    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
-    geometry.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3));
+    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
     return geometry;
   };
 
@@ -165,41 +217,32 @@ function ModelViewer({ modelData, preferences }: ModelViewerProps) {
 
           if (verticesEl && trianglesEl) {
             const geometry = new THREE.BufferGeometry();
-            const vertexArray: number[] = [];
-            const normalArray: number[] = [];
-
             const vertexElements = verticesEl.getElementsByTagName('vertex');
+            const triangleElements = trianglesEl.getElementsByTagName('triangle');
+            const vertices = new Float32Array(vertexElements.length * 3);
+            const indices = vertexElements.length > 65535
+              ? new Uint32Array(triangleElements.length * 3)
+              : new Uint16Array(triangleElements.length * 3);
+
             for (let j = 0; j < vertexElements.length; j++) {
               const v = vertexElements[j];
-              vertexArray.push(
-                parseFloat(v.getAttribute('x') || '0'),
-                parseFloat(v.getAttribute('y') || '0'),
-                parseFloat(v.getAttribute('z') || '0')
-              );
+              const vertexOffset = j * 3;
+              vertices[vertexOffset] = parseFloat(v.getAttribute('x') || '0');
+              vertices[vertexOffset + 1] = parseFloat(v.getAttribute('y') || '0');
+              vertices[vertexOffset + 2] = parseFloat(v.getAttribute('z') || '0');
             }
 
-            const triangleElements = trianglesEl.getElementsByTagName('triangle');
             for (let j = 0; j < triangleElements.length; j++) {
               const t = triangleElements[j];
-              const v1 = parseInt(t.getAttribute('v1') || '0');
-              const v2 = parseInt(t.getAttribute('v2') || '0');
-              const v3 = parseInt(t.getAttribute('v3') || '0');
-
-              const p1 = new THREE.Vector3(vertexArray[v1 * 3], vertexArray[v1 * 3 + 1], vertexArray[v1 * 3 + 2]);
-              const p2 = new THREE.Vector3(vertexArray[v2 * 3], vertexArray[v2 * 3 + 1], vertexArray[v2 * 3 + 2]);
-              const p3 = new THREE.Vector3(vertexArray[v3 * 3], vertexArray[v3 * 3 + 1], vertexArray[v3 * 3 + 2]);
-
-              const edge1 = new THREE.Vector3().subVectors(p2, p1);
-              const edge2 = new THREE.Vector3().subVectors(p3, p1);
-              const normal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
-
-              for (let k = 0; k < 3; k++) {
-                normalArray.push(normal.x, normal.y, normal.z);
-              }
+              const indexOffset = j * 3;
+              indices[indexOffset] = parseInt(t.getAttribute('v1') || '0', 10);
+              indices[indexOffset + 1] = parseInt(t.getAttribute('v2') || '0', 10);
+              indices[indexOffset + 2] = parseInt(t.getAttribute('v3') || '0', 10);
             }
 
-            geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertexArray), 3));
-            geometry.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(normalArray), 3));
+            geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+            geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+            geometry.computeVertexNormals();
             geometries.push(geometry);
           }
         }
@@ -212,8 +255,61 @@ function ModelViewer({ modelData, preferences }: ModelViewerProps) {
     }
   };
 
+  const initializeViewer = (): void => {
+    if (!mountRef.current || rendererRef.current) return;
+
+    sceneRef.current = new THREE.Scene();
+    sceneRef.current.background = new THREE.Color(preferences.previewBackgroundColor);
+
+    cameraRef.current = new THREE.PerspectiveCamera(
+      50,
+      mountRef.current.clientWidth / mountRef.current.clientHeight,
+      0.1,
+      100000
+    );
+
+    rendererRef.current = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance',
+    });
+    rendererRef.current.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
+    rendererRef.current.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    rendererRef.current.shadowMap.enabled = false;
+    rendererRef.current.domElement.style.touchAction = 'none';
+    mountRef.current.appendChild(rendererRef.current.domElement);
+
+    setupLights();
+    setupControls();
+    setupResizeObserver();
+  };
+
+  const updateSceneAppearance = (): void => {
+    if (sceneRef.current) {
+      sceneRef.current.background = new THREE.Color(preferences.previewBackgroundColor);
+    }
+
+    if (meshRef.current) {
+      meshRef.current.traverse((object) => {
+        if (!(object instanceof THREE.Mesh)) return;
+
+        const materials = Array.isArray(object.material) ? object.material : [object.material];
+        materials.forEach((material) => {
+          if (material instanceof THREE.MeshPhongMaterial) {
+            material.color.set(preferences.modelColor);
+            material.needsUpdate = true;
+          }
+        });
+      });
+    }
+
+    requestRender();
+  };
+
   const loadAndDisplayModel = async (): Promise<void> => {
     if (!mountRef.current) return;
+    initializeViewer();
+    const loadRequestId = ++loadRequestIdRef.current;
 
     try {
       const arrayBuffer = await window.electronAPI.loadModel(modelData.path);
@@ -242,6 +338,11 @@ function ModelViewer({ modelData, preferences }: ModelViewerProps) {
         geometries = parsed || [];
       }
 
+      if (loadRequestId !== loadRequestIdRef.current) {
+        geometries.forEach((geometry) => geometry.dispose());
+        return;
+      }
+
       renderScene(geometries);
     } catch (error) {
       console.error('Error loading model:', error);
@@ -250,28 +351,11 @@ function ModelViewer({ modelData, preferences }: ModelViewerProps) {
 
   const renderScene = (geometries: THREE.BufferGeometry[]): void => {
     if (!mountRef.current) return;
+    initializeViewer();
+    if (!sceneRef.current) return;
 
-    // Cleanup previous renderer if exists
-    cleanup();
-
-    // Initialize scene
-    sceneRef.current = new THREE.Scene();
     sceneRef.current.background = new THREE.Color(preferences.previewBackgroundColor);
-
-    cameraRef.current = new THREE.PerspectiveCamera(
-      50,
-      mountRef.current.clientWidth / mountRef.current.clientHeight,
-      0.1,
-      100000
-    );
-
-    rendererRef.current = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    rendererRef.current.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
-    rendererRef.current.setPixelRatio(window.devicePixelRatio);
-    rendererRef.current.shadowMap.enabled = true;
-    mountRef.current.appendChild(rendererRef.current.domElement);
-
-    setupLights();
+    disposeCurrentModel();
 
     // Create mesh group
     const group = new THREE.Group();
@@ -291,8 +375,6 @@ function ModelViewer({ modelData, preferences }: ModelViewerProps) {
       });
 
       const mesh = new THREE.Mesh(geometry, material);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
       group.add(mesh);
     });
 
@@ -302,11 +384,8 @@ function ModelViewer({ modelData, preferences }: ModelViewerProps) {
     // Center and fit camera
     centerAndFitCamera(group);
 
-    // Setup controls
-    setupControls();
-
-    // Start animation loop
-    animate();
+    // Render once after loading. Further renders are requested by controls/resizes.
+    requestRender();
   };
 
   const setupLights = (): void => {
@@ -317,7 +396,6 @@ function ModelViewer({ modelData, preferences }: ModelViewerProps) {
 
     const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
     directionalLight1.position.set(5, 10, 7);
-    directionalLight1.castShadow = true;
     sceneRef.current.add(directionalLight1);
 
     const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
@@ -332,51 +410,94 @@ function ModelViewer({ modelData, preferences }: ModelViewerProps) {
   const setupControls = (): void => {
     if (!rendererRef.current || !mountRef.current) return;
 
-    mountRef.current.addEventListener('mousedown', handleMouseDown);
-    mountRef.current.addEventListener('mousemove', handleMouseMove);
-    mountRef.current.addEventListener('mouseup', handleMouseUp);
+    mountRef.current.addEventListener('pointerdown', handlePointerDown);
+    mountRef.current.addEventListener('pointermove', handlePointerMove);
+    mountRef.current.addEventListener('pointerup', handlePointerUp);
+    mountRef.current.addEventListener('pointercancel', handlePointerUp);
     mountRef.current.addEventListener('wheel', handleWheel, { passive: false });
     mountRef.current.addEventListener('contextmenu', handleContextMenu);
   };
 
-  const handleMouseDown = (e: MouseEvent): void => {
+  const setupResizeObserver = (): void => {
+    if (!mountRef.current || !rendererRef.current || !cameraRef.current) return;
+
+    resizeObserverRef.current = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (!rendererRef.current || !cameraRef.current || width === 0 || height === 0) return;
+
+      rendererRef.current.setSize(width, height);
+      cameraRef.current.aspect = width / height;
+      cameraRef.current.updateProjectionMatrix();
+      requestRender();
+    });
+
+    resizeObserverRef.current.observe(mountRef.current);
+  };
+
+  const beginInteractionRender = (): void => {
+    if (renderInteractionRef.current) return;
+
+    renderInteractionRef.current = true;
+    const renderWhileInteracting = () => {
+      if (!renderInteractionRef.current) return;
+      renderOnce();
+      animationIdRef.current = requestAnimationFrame(renderWhileInteracting);
+    };
+
+    animationIdRef.current = requestAnimationFrame(renderWhileInteracting);
+  };
+
+  const endInteractionRender = (): void => {
+    renderInteractionRef.current = false;
+    requestRender();
+  };
+
+  const handlePointerDown = (e: PointerEvent): void => {
     e.preventDefault();
     if (e.button === 0) {
       controlsStateRef.current.isDragging = true;
-    } else if (e.button === 2) {
+    } else if (e.button === 1 || e.button === 2) {
       controlsStateRef.current.isPanning = true;
     }
+
     controlsStateRef.current.previousMouse = { x: e.clientX, y: e.clientY };
+    mountRef.current?.setPointerCapture(e.pointerId);
+    mountRef.current?.classList.add('is-interacting');
+    beginInteractionRender();
   };
 
-  const handleMouseMove = (e: MouseEvent): void => {
+  const handlePointerMove = (e: PointerEvent): void => {
     const state = controlsStateRef.current;
+    if (!state.isDragging && !state.isPanning) return;
 
-    if (state.isDragging && meshRef.current) {
-      const deltaX = e.clientX - state.previousMouse.x;
-      const deltaY = e.clientY - state.previousMouse.y;
+    const deltaX = e.clientX - state.previousMouse.x;
+    const deltaY = e.clientY - state.previousMouse.y;
+    state.previousMouse = { x: e.clientX, y: e.clientY };
 
-      meshRef.current.rotation.y += deltaX * 0.01;
-      meshRef.current.rotation.x += deltaY * 0.01;
-
-      state.previousMouse = { x: e.clientX, y: e.clientY };
+    if (state.isDragging && meshRef.current && mountRef.current) {
+      const rotationSpeed = (Math.PI * 2) / Math.max(240, Math.min(mountRef.current.clientWidth, mountRef.current.clientHeight));
+      meshRef.current.rotation.y += deltaX * rotationSpeed;
+      meshRef.current.rotation.x += deltaY * rotationSpeed;
     }
 
-    if (state.isPanning && cameraRef.current) {
-      const deltaX = e.clientX - state.previousMouse.x;
-      const deltaY = e.clientY - state.previousMouse.y;
+    if (state.isPanning && cameraRef.current && mountRef.current) {
+      const viewportHeight = Math.max(1, mountRef.current.clientHeight);
+      const visibleHeight = 2 * Math.tan(THREE.MathUtils.degToRad(cameraRef.current.fov) / 2) * cameraRef.current.position.z;
+      const visibleWidth = visibleHeight * cameraRef.current.aspect;
 
-      const panSpeed = 0.002 * cameraRef.current.position.z;
-      cameraRef.current.position.x -= deltaX * panSpeed;
-      cameraRef.current.position.y += deltaY * panSpeed;
-
-      state.previousMouse = { x: e.clientX, y: e.clientY };
+      cameraRef.current.position.x -= (deltaX / Math.max(1, mountRef.current.clientWidth)) * visibleWidth;
+      cameraRef.current.position.y += (deltaY / viewportHeight) * visibleHeight;
     }
   };
 
-  const handleMouseUp = (): void => {
+  const handlePointerUp = (e: PointerEvent): void => {
     controlsStateRef.current.isDragging = false;
     controlsStateRef.current.isPanning = false;
+    if (mountRef.current?.hasPointerCapture(e.pointerId)) {
+      mountRef.current.releasePointerCapture(e.pointerId);
+    }
+    mountRef.current?.classList.remove('is-interacting');
+    endInteractionRender();
   };
 
   const handleWheel = (e: WheelEvent): void => {
@@ -389,6 +510,8 @@ function ModelViewer({ modelData, preferences }: ModelViewerProps) {
     if (cameraRef.current.position.z < 10) {
       cameraRef.current.position.z = 10;
     }
+
+    requestRender();
   };
 
   const handleContextMenu = (e: Event): void => {
@@ -412,11 +535,21 @@ function ModelViewer({ modelData, preferences }: ModelViewerProps) {
     cameraRef.current.lookAt(new THREE.Vector3(0, 0, 0));
   };
 
-  const animate = (): void => {
-    animationIdRef.current = requestAnimationFrame(animate);
+  const renderOnce = (): void => {
     if (rendererRef.current && sceneRef.current && cameraRef.current) {
       rendererRef.current.render(sceneRef.current, cameraRef.current);
     }
+  };
+
+  const requestRender = (): void => {
+    if (renderRequestedRef.current) return;
+
+    renderRequestedRef.current = true;
+    animationIdRef.current = requestAnimationFrame(() => {
+      renderRequestedRef.current = false;
+      animationIdRef.current = 0;
+      renderOnce();
+    });
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -457,7 +590,12 @@ export async function generateThumbnail(modelPath: string, ext: string, preferen
     canvas.width = 256;
     canvas.height = 256;
 
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance',
+    });
     renderer.setSize(256, 256);
     renderer.setClearColor(new THREE.Color(preferences.thumbnailBackgroundColor), 1);
 
@@ -511,26 +649,31 @@ export async function generateThumbnail(modelPath: string, ext: string, preferen
       } else {
         const triangles = view.getUint32(80, true);
         const geometry = new THREE.BufferGeometry();
-        const vertices: number[] = [];
-        const normals: number[] = [];
+        const vertices = new Float32Array(triangles * 9);
+        const normals = new Float32Array(triangles * 9);
 
         let offset = 84;
+        let attributeOffset = 0;
         for (let i = 0; i < triangles; i++) {
           const nx = view.getFloat32(offset, true); offset += 4;
           const ny = view.getFloat32(offset, true); offset += 4;
           const nz = view.getFloat32(offset, true); offset += 4;
 
           for (let j = 0; j < 3; j++) {
-            vertices.push(view.getFloat32(offset, true)); offset += 4;
-            vertices.push(view.getFloat32(offset, true)); offset += 4;
-            vertices.push(view.getFloat32(offset, true)); offset += 4;
-            normals.push(nx, ny, nz);
+            vertices[attributeOffset] = view.getFloat32(offset, true); offset += 4;
+            vertices[attributeOffset + 1] = view.getFloat32(offset, true); offset += 4;
+            vertices[attributeOffset + 2] = view.getFloat32(offset, true); offset += 4;
+
+            normals[attributeOffset] = nx;
+            normals[attributeOffset + 1] = ny;
+            normals[attributeOffset + 2] = nz;
+            attributeOffset += 3;
           }
           offset += 2;
         }
 
-        geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
-        geometry.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3));
+        geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
         geometries = [geometry];
       }
     } else if (ext === '.3mf') {
@@ -551,41 +694,32 @@ export async function generateThumbnail(modelPath: string, ext: string, preferen
 
           if (verticesEl && trianglesEl) {
             const geometry = new THREE.BufferGeometry();
-            const vertexArray: number[] = [];
-            const normalArray: number[] = [];
-
             const vertexElements = verticesEl.getElementsByTagName('vertex');
+            const triangleElements = trianglesEl.getElementsByTagName('triangle');
+            const vertices = new Float32Array(vertexElements.length * 3);
+            const indices = vertexElements.length > 65535
+              ? new Uint32Array(triangleElements.length * 3)
+              : new Uint16Array(triangleElements.length * 3);
+
             for (let j = 0; j < vertexElements.length; j++) {
               const v = vertexElements[j];
-              vertexArray.push(
-                parseFloat(v.getAttribute('x') || '0'),
-                parseFloat(v.getAttribute('y') || '0'),
-                parseFloat(v.getAttribute('z') || '0')
-              );
+              const vertexOffset = j * 3;
+              vertices[vertexOffset] = parseFloat(v.getAttribute('x') || '0');
+              vertices[vertexOffset + 1] = parseFloat(v.getAttribute('y') || '0');
+              vertices[vertexOffset + 2] = parseFloat(v.getAttribute('z') || '0');
             }
 
-            const triangleElements = trianglesEl.getElementsByTagName('triangle');
             for (let j = 0; j < triangleElements.length; j++) {
               const t = triangleElements[j];
-              const v1 = parseInt(t.getAttribute('v1') || '0');
-              const v2 = parseInt(t.getAttribute('v2') || '0');
-              const v3 = parseInt(t.getAttribute('v3') || '0');
-
-              const p1 = new THREE.Vector3(vertexArray[v1 * 3], vertexArray[v1 * 3 + 1], vertexArray[v1 * 3 + 2]);
-              const p2 = new THREE.Vector3(vertexArray[v2 * 3], vertexArray[v2 * 3 + 1], vertexArray[v2 * 3 + 2]);
-              const p3 = new THREE.Vector3(vertexArray[v3 * 3], vertexArray[v3 * 3 + 1], vertexArray[v3 * 3 + 2]);
-
-              const edge1 = new THREE.Vector3().subVectors(p2, p1);
-              const edge2 = new THREE.Vector3().subVectors(p3, p1);
-              const normal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
-
-              for (let k = 0; k < 3; k++) {
-                normalArray.push(normal.x, normal.y, normal.z);
-              }
+              const indexOffset = j * 3;
+              indices[indexOffset] = parseInt(t.getAttribute('v1') || '0', 10);
+              indices[indexOffset + 1] = parseInt(t.getAttribute('v2') || '0', 10);
+              indices[indexOffset + 2] = parseInt(t.getAttribute('v3') || '0', 10);
             }
 
-            geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertexArray), 3));
-            geometry.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(normalArray), 3));
+            geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+            geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+            geometry.computeVertexNormals();
             geometries.push(geometry);
           }
         }
@@ -636,6 +770,13 @@ export async function generateThumbnail(modelPath: string, ext: string, preferen
     const thumbnailUrl = canvas.toDataURL('image/png');
 
     // Cleanup
+    group.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+
+      object.geometry?.dispose();
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      materials.forEach((material) => material?.dispose());
+    });
     renderer.dispose();
 
     return thumbnailUrl;

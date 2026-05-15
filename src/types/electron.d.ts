@@ -34,11 +34,14 @@ export interface FileStats {
   modified: Date;
 }
 
+export type ThemePreference = 'system' | 'light' | 'dark';
+
 export interface UserPreferences {
   gridView: boolean;
   viewerVisible: boolean;
   sortBy: 'name' | 'size' | 'modified';
   sortOrder: 'asc' | 'desc';
+  theme: ThemePreference;
   previewBackgroundColor: string;
   thumbnailBackgroundColor: string;
   modelColor: string;

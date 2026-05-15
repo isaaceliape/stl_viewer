@@ -72,8 +72,50 @@ body,
   color-scheme: light dark;
 }
 
+/* Explicit dark mode from Settings. */
+:root[data-theme='dark'] {
+  --accent:          #7c8ff5;
+  --accent-soft:     #1e2340;
+  --accent-hover:    #9b72cf;
+
+  --bg-app:          #141414;
+  --bg-surface:      #1e1e1e;
+  --bg-raised:       #242424;
+  --bg-subtle:       #1a1a1a;
+  --bg-muted:        #2a2a2a;
+
+  --border:          #2e2e3a;
+  --border-strong:   #3a3a4a;
+  --border-subtle:   #2a2a2a;
+  --border-divider:  #383838;
+
+  --text-primary:    #e8e8e8;
+  --text-secondary:  #aaaaaa;
+  --text-muted:      #777777;
+  --text-faint:      #666666;
+  --text-heading:    #f0f0f0;
+
+  --pill-bg:         #2a2a2a;
+  --pill-text:       #aaaaaa;
+  --pill-border:     #3a3a3a;
+
+  --card-bg:         #1e1e1e;
+  --card-border:     #2e2e2e;
+  --card-hover-bg:   #282828;
+
+  --scrollbar-track: #1a1a1a;
+  --scrollbar-thumb: #444444;
+
+  --folder-info-bg:  #1e1e1e;
+  --folder-info-text:#888888;
+
+  --header-gradient: linear-gradient(135deg, #1e2340 0%, #2a1a3a 100%);
+}
+
+/* System-default theme follows the OS preference until the user chooses light/dark. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]),
+  :root[data-theme='system'] {
     --accent:          #7c8ff5;
     --accent-soft:     #1e2340;
     --accent-hover:    #9b72cf;

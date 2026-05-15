@@ -21,6 +21,7 @@ const defaultPreferences: UserPreferences = {
   viewerVisible: true,
   sortBy: 'name',
   sortOrder: 'asc',
+  theme: 'system',
   previewBackgroundColor: '#1a1a1a',
   thumbnailBackgroundColor: '#2a2a2a',
   modelColor: '#4488ff',
@@ -58,6 +59,11 @@ function App() {
   useEffect(() => {
     loadInitialState();
   }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = preferences.theme;
+    document.documentElement.style.colorScheme = preferences.theme === 'system' ? 'light dark' : preferences.theme;
+  }, [preferences.theme]);
 
   useEffect(() => {
     if (preferences.autoSelectFirstModel && !selectedModel && sortedModels.length > 0) {
@@ -155,13 +161,15 @@ function App() {
           <button onClick={handleSelectFolder} className="folder-btn">
             <FontAwesomeIcon icon={faFolderOpen} /> Change Folder
           </button>
-          <button 
-            onClick={handleToggleViewerVisible}
-            className="toggle-viewer-btn"
-            title={viewerVisible ? 'Hide preview' : 'Show preview'}
-          >
-            {viewerVisible ? <><FontAwesomeIcon icon={faChevronLeft} /> Hide Preview</> : <><FontAwesomeIcon icon={faChevronRight} /> Show Preview</>}
-          </button>
+          {activePage === 'gallery' && (
+            <button
+              onClick={handleToggleViewerVisible}
+              className="toggle-viewer-btn"
+              title={viewerVisible ? 'Hide preview' : 'Show preview'}
+            >
+              {viewerVisible ? <><FontAwesomeIcon icon={faChevronLeft} /> Hide Preview</> : <><FontAwesomeIcon icon={faChevronRight} /> Show Preview</>}
+            </button>
+          )}
           <button
             onClick={() => setActivePage(activePage === 'settings' ? 'gallery' : 'settings')}
             className={`settings-btn ${activePage === 'settings' ? 'active' : ''}`}
@@ -191,6 +199,21 @@ function App() {
           </section>
 
           <div className="settings-grid">
+            <section className="settings-section">
+              <h3>Appearance</h3>
+              <label className="setting-row">
+                <span>
+                  <strong>App theme</strong>
+                  <small>Use your system setting, or force light/dark mode.</small>
+                </span>
+                <select value={preferences.theme} onChange={(e) => savePreferences({ theme: e.target.value as UserPreferences['theme'] })}>
+                  <option value="system">System default</option>
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                </select>
+              </label>
+            </section>
+
             <section className="settings-section">
               <h3>Colors</h3>
               <label className="setting-row">
@@ -320,7 +343,7 @@ function App() {
           {viewerVisible && (
             <div className="viewer-section" style={{ background: preferences.previewBackgroundColor }}>
               {selectedModel ? (
-                <ModelViewer key={`${selectedModel.path}-${preferences.previewBackgroundColor}-${preferences.modelColor}`} modelData={selectedModel} preferences={preferences} />
+                <ModelViewer key={selectedModel.path} modelData={selectedModel} preferences={preferences} />
               ) : (
                 <div className="viewer-placeholder">
                   <p>Select a model to view</p>
