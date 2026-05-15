@@ -338,3 +338,46 @@
     font-size: 20px;
   }
 }
+/* ─── Card density ───────────────────────────────────────────── */
+
+.grid-items.density-comfortable {
+  /* default spacing — no overrides needed */
+}
+
+.grid-items.density-compact .grid-item {
+  padding: 4px 8px;
+  min-height: 48px;
+  gap: 8px;
+}
+
+.grid-items.density-compact .item-thumbnail {
+  width: 38px;
+  height: 38px;
+}
+
+.grid-items.density-compact .item-name {
+  font-size: 12px;
+}
+
+.grid-items.density-compact .item-meta {
+  font-size: 11px;
+}
+
+.grid-items.density-spacious .grid-item {
+  padding: 14px 16px;
+  min-height: 80px;
+  gap: 14px;
+}
+
+.grid-items.density-spacious .item-thumbnail {
+  width: 60px;
+  height: 60px;
+}
+
+.grid-items.density-spacious .item-name {
+  font-size: 15px;
+}
+
+.grid-items.density-spacious .item-meta {
+  font-size: 13px;
+}
