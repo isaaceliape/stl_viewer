@@ -10,6 +10,8 @@ interface ModelGridProps {
   loading: boolean;
   gridView: boolean;
   preferences: UserPreferences;
+  onSortChange: (sort: 'name' | 'size' | 'modified') => void;
+  onToggleGridView: () => void;
 }
 
 interface ThumbnailState {
@@ -20,7 +22,7 @@ interface LoadingThumbnailState {
   [path: string]: boolean;
 }
 
-function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView, preferences }: ModelGridProps) {
+function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView, preferences, onSortChange, onToggleGridView }: ModelGridProps) {
   const [thumbnails, setThumbnails] = useState<ThumbnailState>({});
 
   const formatFileSize = (bytes?: number): string => {
@@ -113,6 +115,25 @@ function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView, pr
     <div className="model-grid">
       <div className="grid-header">
         <h2>Models ({models.length})</h2>
+        <div className="grid-header-controls">
+          <select
+            value={preferences.sortBy}
+            onChange={(e) => onSortChange(e.target.value as 'name' | 'size' | 'modified')}
+            className="sort-select"
+            title="Sort by"
+          >
+            <option value="name">Name (A-Z)</option>
+            <option value="size">Size (Largest)</option>
+            <option value="modified">Date (Newest)</option>
+          </select>
+          <button
+            onClick={onToggleGridView}
+            className={`view-toggle-btn ${gridView ? 'active' : ''}`}
+            title={gridView ? 'Switch to list view' : 'Switch to grid view'}
+          >
+            {gridView ? '📋' : '⊞'}
+          </button>
+        </div>
       </div>
 
       {models.length === 0 && !loading ? (

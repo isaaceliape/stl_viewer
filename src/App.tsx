@@ -142,26 +142,6 @@ function App() {
           <button onClick={handleSelectFolder} className="folder-btn">
             📁 Change Folder
           </button>
-          <div className="sort-dropdown">
-            <label htmlFor="sort-select">Sort by:</label>
-            <select
-              id="sort-select"
-              value={sortBy}
-              onChange={(e) => savePreferences({ sortBy: e.target.value as SortOption })}
-              className="sort-select"
-            >
-              <option value="name">Name (A-Z)</option>
-              <option value="size">Size (Largest)</option>
-              <option value="modified">Date (Newest)</option>
-            </select>
-          </div>
-          <button 
-            onClick={handleToggleGridView}
-            className={`view-toggle-btn ${gridView ? 'active' : ''}`}
-            title={gridView ? 'Switch to list view' : 'Switch to grid view'}
-          >
-            {gridView ? '📋 List' : '⊞ Grid'}
-          </button>
           <button 
             onClick={handleToggleViewerVisible}
             className="toggle-viewer-btn"
@@ -319,6 +299,8 @@ function App() {
               loading={loading}
               gridView={gridView}
               preferences={preferences}
+              onSortChange={(sort) => savePreferences({ sortBy: sort })}
+              onToggleGridView={handleToggleGridView}
             />
           </div>
           {viewerVisible && (
