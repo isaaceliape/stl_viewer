@@ -15,6 +15,7 @@ declare global {
       getThumbnailCache: (modelPath: string, cacheVariant?: string) => Promise<string | null>;
       saveThumbnailCache: (modelPath: string, thumbnailData: string, cacheVariant?: string) => Promise<boolean>;
       clearThumbnailCache: () => Promise<boolean>;
+      openInSlicer: (modelPath: string) => Promise<{ success: boolean; error?: string }>;
     };
   }
 }

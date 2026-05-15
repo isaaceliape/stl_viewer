@@ -146,6 +146,16 @@ function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView, pr
                     </span>
                   </div>
                 )}
+                <button
+                  className="open-in-slicer-btn"
+                  title="Open in AnycubicSlicerNext"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.electronAPI.openInSlicer(model.path);
+                  }}
+                >
+                  🖨
+                </button>
               </div>
               <div className="item-info">
                 <h3 className="item-name" title={model.name}>

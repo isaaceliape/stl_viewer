@@ -381,3 +381,46 @@
 .grid-items.density-spacious .item-meta {
   font-size: 13px;
 }
+
+/* ─── Open-in-slicer button ──────────────────────────────────── */
+
+.item-thumbnail {
+  position: relative;
+}
+
+.open-in-slicer-btn {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(20, 20, 30, 0.75);
+  color: white;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease;
+  backdrop-filter: blur(4px);
+  z-index: 2;
+}
+
+.grid-item:hover .open-in-slicer-btn {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.open-in-slicer-btn:hover {
+  background: rgba(100, 120, 255, 0.9);
+  transform: scale(1.1) !important;
+}
+
+.open-in-slicer-btn:active {
+  transform: scale(0.95) !important;
+}

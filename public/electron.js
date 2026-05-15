@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -276,5 +276,20 @@ ipcMain.handle('clear-thumbnail-cache', async () => {
   } catch (error) {
     console.error('Error clearing thumbnail cache:', error);
     return false;
+  }
+});
+
+ipcMain.handle('open-in-slicer', async (event, modelPath) => {
+  try {
+    const { execFile } = require('child_process');
+    await new Promise((resolve, reject) => {
+      execFile('open', ['-a', 'AnycubicSlicerNext', modelPath], (err) => {
+        if (err) reject(err); else resolve();
+      });
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error opening in slicer:', error);
+    return { success: false, error: error.message };
   }
 });

@@ -16,4 +16,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getThumbnailCache: (modelPath, cacheVariant) => ipcRenderer.invoke('get-thumbnail-cache', modelPath, cacheVariant),
   saveThumbnailCache: (modelPath, thumbnailData, cacheVariant) => ipcRenderer.invoke('save-thumbnail-cache', modelPath, thumbnailData, cacheVariant),
   clearThumbnailCache: () => ipcRenderer.invoke('clear-thumbnail-cache'),
+  openInSlicer: (modelPath) => ipcRenderer.invoke('open-in-slicer', modelPath),
 });
