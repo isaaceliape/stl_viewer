@@ -2,6 +2,16 @@ import { useEffect, useState, useRef } from 'react';
 import { generateThumbnail } from './ModelViewer';
 import { ModelInfo, UserPreferences } from '../types/electron';
 import './ModelGrid.css';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faList,
+  faThLarge,
+  faFolderOpen,
+  faCube,
+  faPalette,
+  faPrint,
+  faClock,
+} from '@fortawesome/free-solid-svg-icons';
 
 interface ModelGridProps {
   models: ModelInfo[];
@@ -131,7 +141,7 @@ function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView, pr
             className={`view-toggle-btn ${gridView ? 'active' : ''}`}
             title={gridView ? 'Switch to list view' : 'Switch to grid view'}
           >
-            {gridView ? '📋' : '⊞'}
+            {gridView ? <FontAwesomeIcon icon={faList} /> : <FontAwesomeIcon icon={faThLarge} />}
           </button>
         </div>
       </div>
@@ -139,7 +149,7 @@ function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView, pr
       {models.length === 0 && !loading ? (
         <div className="empty-state">
           <p>No STL or 3MF files found</p>
-          <p className="empty-hint">Click "📁 Change Folder" to browse</p>
+          <p className="empty-hint">Click "<FontAwesomeIcon icon={faFolderOpen} /> Change Folder" to browse</p>
         </div>
       ) : (
         <div className={`grid-items ${gridView ? 'grid-view' : 'list-view'} density-${preferences.cardDensity}`}>
@@ -163,7 +173,7 @@ function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView, pr
                 ) : (
                   <div className="thumbnail-placeholder">
                     <span className="placeholder-icon">
-                      {model.ext === '.stl' ? '📦' : '🎨'}
+                      {model.ext === '.stl' ? <FontAwesomeIcon icon={faCube} /> : <FontAwesomeIcon icon={faPalette} />}
                     </span>
                   </div>
                 )}
@@ -175,7 +185,7 @@ function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView, pr
                     window.electronAPI.openInSlicer(model.path);
                   }}
                 >
-                  🖨
+                  <FontAwesomeIcon icon={faPrint} />
                 </button>
               </div>
               <div className="item-info">
@@ -188,9 +198,9 @@ function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView, pr
                 </div>
                 <div className="item-details">
                   <span title={model.modified ? new Date(model.modified).toLocaleString() : undefined}>
-                    🕒 {formatModifiedDate(model.modified)}
+                    <FontAwesomeIcon icon={faClock} /> {formatModifiedDate(model.modified)}
                   </span>
-                  <span title={model.path}>📁 {getFolderName(model.path)}</span>
+                  <span title={model.path}><FontAwesomeIcon icon={faFolderOpen} /> {getFolderName(model.path)}</span>
                 </div>
               </div>
             </div>

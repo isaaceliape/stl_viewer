@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import JSZip from 'jszip';
 import './ModelViewer.css';
 import { ModelInfo, UserPreferences } from '../types/electron';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faLightbulb } from '@fortawesome/free-solid-svg-icons';
 
 interface ModelViewerProps {
   modelData: ModelInfo;
@@ -437,7 +439,7 @@ function ModelViewer({ modelData, preferences }: ModelViewerProps) {
           <p className="info-item">
             <span className="label">Modified:</span> {info.modified}
           </p>
-          <p className="info-hint">💡 Left-drag: rotate • Right-drag: pan • Scroll: zoom</p>
+          <p className="info-hint"><FontAwesomeIcon icon={faLightbulb} /> Left-drag: rotate • Right-drag: pan • Scroll: zoom</p>
         </div>
       )}
     </div>

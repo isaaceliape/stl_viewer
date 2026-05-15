@@ -1,5 +1,14 @@
 import { useState, useEffect } from 'react';
 import './App.css';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faPalette,
+  faFolderOpen,
+  faChevronLeft,
+  faChevronRight,
+  faArrowLeft,
+  faGear,
+} from '@fortawesome/free-solid-svg-icons';
 import ModelGrid from './components/ModelGrid';
 import ModelViewer from './components/ModelViewer';
 import { ModelInfo, UserPreferences } from './types/electron';
@@ -137,23 +146,23 @@ function App() {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>🎨 STL/3MF Gallery Viewer</h1>
+        <h1><FontAwesomeIcon icon={faPalette} /> STL/3MF Gallery Viewer</h1>
         <div className="header-buttons">
           <button onClick={handleSelectFolder} className="folder-btn">
-            📁 Change Folder
+            <FontAwesomeIcon icon={faFolderOpen} /> Change Folder
           </button>
           <button 
             onClick={handleToggleViewerVisible}
             className="toggle-viewer-btn"
             title={viewerVisible ? 'Hide preview' : 'Show preview'}
           >
-            {viewerVisible ? '◀ Hide Preview' : '▶ Show Preview'}
+            {viewerVisible ? <><FontAwesomeIcon icon={faChevronLeft} /> Hide Preview</> : <><FontAwesomeIcon icon={faChevronRight} /> Show Preview</>}
           </button>
           <button
             onClick={() => setActivePage(activePage === 'settings' ? 'gallery' : 'settings')}
             className={`settings-btn ${activePage === 'settings' ? 'active' : ''}`}
           >
-            {activePage === 'settings' ? '← Gallery' : '⚙ Settings'}
+            {activePage === 'settings' ? <><FontAwesomeIcon icon={faArrowLeft} /> Gallery</> : <><FontAwesomeIcon icon={faGear} /> Settings</>}
           </button>
         </div>
       </header>
