@@ -67,6 +67,8 @@ body,
   --folder-info-bg:  #ffffff;
   --folder-info-text:#666666;
 
+  --header-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
   color-scheme: light dark;
 }
 
@@ -106,5 +108,7 @@ body,
 
     --folder-info-bg:  #1e1e1e;
     --folder-info-text:#888888;
+
+    --header-gradient: linear-gradient(135deg, #1e2340 0%, #2a1a3a 100%);
   }
 }

@@ -25,7 +25,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+  background: var(--header-gradient);
   color: white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
