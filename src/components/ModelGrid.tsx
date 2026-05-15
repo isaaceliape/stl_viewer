@@ -11,6 +11,7 @@ import {
   faPalette,
   faPrint,
   faClock,
+  faTimes,
 } from '@fortawesome/free-solid-svg-icons';
 
 interface ModelGridProps {
@@ -32,8 +33,29 @@ interface LoadingThumbnailState {
   [path: string]: boolean;
 }
 
+type FilterExt = '.stl' | '.3mf';
+
 function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView, preferences, onSortChange, onToggleGridView }: ModelGridProps) {
   const [thumbnails, setThumbnails] = useState<ThumbnailState>({});
+  const [activeFilters, setActiveFilters] = useState<Set<FilterExt>>(new Set());
+
+  // Derive available extensions from the current model list
+  const availableExts = Array.from(new Set(models.map(m => m.ext))) as FilterExt[];
+
+  const toggleFilter = (ext: FilterExt) => {
+    setActiveFilters(prev => {
+      const next = new Set(prev);
+      if (next.has(ext)) next.delete(ext);
+      else next.add(ext);
+      return next;
+    });
+  };
+
+  const clearFilters = () => setActiveFilters(new Set());
+
+  const filteredModels = activeFilters.size === 0
+    ? models
+    : models.filter(m => activeFilters.has(m.ext as FilterExt));
 
   const formatFileSize = (bytes?: number): string => {
     if (!bytes && bytes !== 0) return 'Unknown size';
@@ -124,7 +146,7 @@ function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView, pr
   return (
     <div className="model-grid">
       <div className="grid-header">
-        <h2>Models ({models.length})</h2>
+        <h2>Models ({filteredModels.length}{activeFilters.size > 0 ? `/${models.length}` : ''})</h2>
         <div className="grid-header-controls">
           <select
             value={preferences.sortBy}
@@ -146,14 +168,45 @@ function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView, pr
         </div>
       </div>
 
-      {models.length === 0 && !loading ? (
+      {availableExts.length > 1 && (
+        <div className="filter-pills-row">
+          {availableExts.map(ext => (
+            <button
+              key={ext}
+              className={`filter-pill ${activeFilters.has(ext) ? 'active' : ''}`}
+              onClick={() => toggleFilter(ext)}
+            >
+              <FontAwesomeIcon icon={ext === '.stl' ? faCube : faPalette} />
+              {ext.toUpperCase().replace('.', '')}
+            </button>
+          ))}
+          {activeFilters.size > 0 && (
+            <button className="filter-pill filter-pill-clear" onClick={clearFilters} title="Clear filters">
+              <FontAwesomeIcon icon={faTimes} /> Clear
+            </button>
+          )}
+        </div>
+      )}
+
+      {filteredModels.length === 0 && !loading ? (
         <div className="empty-state">
-          <p>No STL or 3MF files found</p>
-          <p className="empty-hint">Click "<FontAwesomeIcon icon={faFolderOpen} /> Change Folder" to browse</p>
+          {models.length === 0 ? (
+            <>
+              <p>No STL or 3MF files found</p>
+              <p className="empty-hint">Click "<FontAwesomeIcon icon={faFolderOpen} /> Change Folder" to browse</p>
+            </>
+          ) : (
+            <>
+              <p>No models match the active filters</p>
+              <button className="filter-pill filter-pill-clear" onClick={clearFilters}>
+                <FontAwesomeIcon icon={faTimes} /> Clear filters
+              </button>
+            </>
+          )}
         </div>
       ) : (
         <div className={`grid-items ${gridView ? 'grid-view' : 'list-view'} density-${preferences.cardDensity}`}>
-          {models.map((model, index) => (
+          {filteredModels.map((model, index) => (
             <div
               key={index}
               className={`grid-item ${selectedModel?.path === model.path ? 'selected' : ''}`}

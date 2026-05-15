@@ -69,6 +69,56 @@
   color: #fff;
 }
 
+/* ─── Filter pills ────────────────────────────────────────────── */
+.filter-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+  flex-wrap: wrap;
+}
+
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1.5px solid #ddd;
+  border-radius: 999px;
+  background: #fff;
+  color: #555;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.filter-pill:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.filter-pill.active {
+  background: #667eea;
+  border-color: #667eea;
+  color: #fff;
+}
+
+.filter-pill-clear {
+  border-color: #e5534b;
+  color: #e5534b;
+  margin-left: auto;
+}
+
+.filter-pill-clear:hover {
+  background: #e5534b;
+  border-color: #e5534b;
+  color: #fff;
+}
+
 .grid-items {
   flex: 1;
   overflow-y: auto;
