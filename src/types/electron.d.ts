@@ -10,8 +10,10 @@ declare global {
       getLastFolder: () => Promise<string>;
       setLastFolder: (folderPath: string) => Promise<boolean>;
       getDefaultFolder: () => Promise<string>;
-      getThumbnailCache: (modelPath: string) => Promise<string | null>;
-      saveThumbnailCache: (modelPath: string, thumbnailData: string) => Promise<boolean>;
+      getPreferences: () => Promise<UserPreferences>;
+      setPreferences: (preferences: Partial<UserPreferences>) => Promise<boolean>;
+      getThumbnailCache: (modelPath: string, cacheVariant?: string) => Promise<string | null>;
+      saveThumbnailCache: (modelPath: string, thumbnailData: string, cacheVariant?: string) => Promise<boolean>;
       clearThumbnailCache: () => Promise<boolean>;
     };
   }
@@ -29,6 +31,18 @@ export interface FileStats {
   size: number;
   created: Date;
   modified: Date;
+}
+
+export interface UserPreferences {
+  gridView: boolean;
+  viewerVisible: boolean;
+  sortBy: 'name' | 'size' | 'modified';
+  previewBackgroundColor: string;
+  thumbnailBackgroundColor: string;
+  modelColor: string;
+  thumbnailZoom: number;
+  cardDensity: 'compact' | 'comfortable' | 'spacious';
+  autoSelectFirstModel: boolean;
 }
 
 export interface ModelData {

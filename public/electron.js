@@ -26,6 +26,7 @@ const prodUrl = `file://${path.join(__dirname, '../build/index.html')}`;
 
 // Config and cache directories
 const cacheDir = path.join(os.homedir(), '.stl-viewer-cache', 'thumbnails');
+const thumbnailCacheVersion = 'v2';
 const configDir = path.join(os.homedir(), '.stl-viewer-cache');
 const configFile = path.join(configDir, 'config.json');
 
@@ -49,18 +50,29 @@ function loadConfig() {
   }
   return {
     lastFolder: null,
-    defaultFolder: path.join(os.homedir(), 'Library/Mobile Documents/com~apple~CloudDocs/3D Printing/Models')
+    defaultFolder: path.join(os.homedir(), 'Library/Mobile Documents/com~apple~CloudDocs/3D Printing/Models'),
+    preferences: {
+      gridView: false,
+      viewerVisible: true,
+      sortBy: 'name',
+      previewBackgroundColor: '#1a1a1a',
+      thumbnailBackgroundColor: '#2a2a2a',
+      modelColor: '#4488ff',
+      thumbnailZoom: 1.08,
+      cardDensity: 'comfortable',
+      autoSelectFirstModel: false,
+    }
   };
 }
 
 // Generate cache key from file path + modification time
-function getCacheKey(filePath) {
+function getCacheKey(filePath, cacheVariant = '') {
   try {
     const stats = fs.statSync(filePath);
-    const hash = `${path.basename(filePath)}-${stats.size}-${Math.floor(stats.mtimeMs)}`;
+    const hash = `${thumbnailCacheVersion}-${cacheVariant}-${path.basename(filePath)}-${stats.size}-${Math.floor(stats.mtimeMs)}`;
     return hash.replace(/[^a-zA-Z0-9-]/g, '_');
   } catch (e) {
-    return path.basename(filePath).replace(/[^a-zA-Z0-9-]/g, '_');
+    return `${thumbnailCacheVersion}-${cacheVariant}-${path.basename(filePath)}`.replace(/[^a-zA-Z0-9-]/g, '_');
   }
 }
 
@@ -139,6 +151,36 @@ ipcMain.handle('get-default-folder', async () => {
   return path.join(os.homedir(), 'Library/Mobile Documents/com~apple~CloudDocs/3D Printing/Models');
 });
 
+ipcMain.handle('get-preferences', async () => {
+  const config = loadConfig();
+  return {
+    gridView: config.preferences?.gridView ?? false,
+    viewerVisible: config.preferences?.viewerVisible ?? true,
+    sortBy: config.preferences?.sortBy ?? 'name',
+    previewBackgroundColor: config.preferences?.previewBackgroundColor ?? '#1a1a1a',
+    thumbnailBackgroundColor: config.preferences?.thumbnailBackgroundColor ?? '#2a2a2a',
+    modelColor: config.preferences?.modelColor ?? '#4488ff',
+    thumbnailZoom: config.preferences?.thumbnailZoom ?? 1.08,
+    cardDensity: config.preferences?.cardDensity ?? 'comfortable',
+    autoSelectFirstModel: config.preferences?.autoSelectFirstModel ?? false,
+  };
+});
+
+ipcMain.handle('set-preferences', async (event, preferences) => {
+  try {
+    const config = loadConfig();
+    config.preferences = {
+      ...(config.preferences || {}),
+      ...preferences,
+    };
+    fs.writeFileSync(configFile, JSON.stringify(config, null, 2));
+    return true;
+  } catch (error) {
+    console.error('Error saving preferences:', error);
+    return false;
+  }
+});
+
 ipcMain.handle('list-models', async (event, folderPath) => {
   try {
     const files = fs.readdirSync(folderPath);
@@ -190,9 +232,9 @@ ipcMain.handle('get-file-stats', async (event, filePath) => {
 });
 
 // Thumbnail cache handlers
-ipcMain.handle('get-thumbnail-cache', async (event, modelPath) => {
+ipcMain.handle('get-thumbnail-cache', async (event, modelPath, cacheVariant) => {
   try {
-    const cacheKey = getCacheKey(modelPath);
+    const cacheKey = getCacheKey(modelPath, cacheVariant);
     const cachePath = path.join(cacheDir, `${cacheKey}.png`);
     
     if (fs.existsSync(cachePath)) {
@@ -206,9 +248,9 @@ ipcMain.handle('get-thumbnail-cache', async (event, modelPath) => {
   }
 });
 
-ipcMain.handle('save-thumbnail-cache', async (event, modelPath, thumbnailData) => {
+ipcMain.handle('save-thumbnail-cache', async (event, modelPath, thumbnailData, cacheVariant) => {
   try {
-    const cacheKey = getCacheKey(modelPath);
+    const cacheKey = getCacheKey(modelPath, cacheVariant);
     const cachePath = path.join(cacheDir, `${cacheKey}.png`);
     
     const base64Data = thumbnailData.replace(/^data:image\/png;base64,/, '');

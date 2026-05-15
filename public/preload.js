@@ -9,8 +9,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getLastFolder: () => ipcRenderer.invoke('get-last-folder'),
   setLastFolder: (folderPath) => ipcRenderer.invoke('set-last-folder', folderPath),
   getDefaultFolder: () => ipcRenderer.invoke('get-default-folder'),
+  // User preferences
+  getPreferences: () => ipcRenderer.invoke('get-preferences'),
+  setPreferences: (preferences) => ipcRenderer.invoke('set-preferences', preferences),
   // Thumbnail cache
-  getThumbnailCache: (modelPath) => ipcRenderer.invoke('get-thumbnail-cache', modelPath),
-  saveThumbnailCache: (modelPath, thumbnailData) => ipcRenderer.invoke('save-thumbnail-cache', modelPath, thumbnailData),
+  getThumbnailCache: (modelPath, cacheVariant) => ipcRenderer.invoke('get-thumbnail-cache', modelPath, cacheVariant),
+  saveThumbnailCache: (modelPath, thumbnailData, cacheVariant) => ipcRenderer.invoke('save-thumbnail-cache', modelPath, thumbnailData, cacheVariant),
   clearThumbnailCache: () => ipcRenderer.invoke('clear-thumbnail-cache'),
 });

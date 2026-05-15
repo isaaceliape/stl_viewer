@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import JSZip from 'jszip';
 import './ModelViewer.css';
-import { ModelInfo } from '../types/electron';
+import { ModelInfo, UserPreferences } from '../types/electron';
 
 interface ModelViewerProps {
   modelData: ModelInfo;
+  preferences: UserPreferences;
 }
 
 interface ModelInfoState {
@@ -20,7 +21,7 @@ interface ControlsState {
   previousMouse: { x: number; y: number };
 }
 
-function ModelViewer({ modelData }: ModelViewerProps) {
+function ModelViewer({ modelData, preferences }: ModelViewerProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -253,7 +254,7 @@ function ModelViewer({ modelData }: ModelViewerProps) {
 
     // Initialize scene
     sceneRef.current = new THREE.Scene();
-    sceneRef.current.background = new THREE.Color(0x1a1a1a);
+    sceneRef.current.background = new THREE.Color(preferences.previewBackgroundColor);
 
     cameraRef.current = new THREE.PerspectiveCamera(
       50,
@@ -281,7 +282,7 @@ function ModelViewer({ modelData }: ModelViewerProps) {
       }
 
       const material = new THREE.MeshPhongMaterial({
-        color: new THREE.Color().setHSL(0.55, 0.7, 0.5),
+        color: new THREE.Color(preferences.modelColor),
         specular: 0x444444,
         shininess: 60,
         side: THREE.DoubleSide,
@@ -444,7 +445,7 @@ function ModelViewer({ modelData }: ModelViewerProps) {
 }
 
 // Export thumbnail generator function
-export async function generateThumbnail(modelPath: string, ext: string): Promise<string | null> {
+export async function generateThumbnail(modelPath: string, ext: string, preferences: UserPreferences): Promise<string | null> {
   try {
     const arrayBuffer = await window.electronAPI.loadModel(modelPath);
     if (!arrayBuffer) return null;
@@ -456,7 +457,7 @@ export async function generateThumbnail(modelPath: string, ext: string): Promise
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setSize(256, 256);
-    renderer.setClearColor(0x2a2a2a, 1);
+    renderer.setClearColor(new THREE.Color(preferences.thumbnailBackgroundColor), 1);
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100000);
@@ -600,7 +601,7 @@ export async function generateThumbnail(modelPath: string, ext: string): Promise
       }
 
       const material = new THREE.MeshPhongMaterial({
-        color: 0x4488ff,
+        color: new THREE.Color(preferences.modelColor),
         specular: 0x444444,
         shininess: 60,
         side: THREE.DoubleSide,
@@ -620,7 +621,8 @@ export async function generateThumbnail(modelPath: string, ext: string): Promise
     const size = boundingBox.getSize(new THREE.Vector3());
     const maxDim = Math.max(size.x, size.y, size.z);
     const fov = camera.fov * (Math.PI / 180);
-    const cameraZ = maxDim / Math.sin(fov / 2) * 1.5;
+    // Keep thumbnails tightly framed so the model uses more of the card space.
+    const cameraZ = maxDim / Math.sin(fov / 2) * preferences.thumbnailZoom;
 
     camera.position.set(0, 0, cameraZ);
     camera.lookAt(0, 0, 0);

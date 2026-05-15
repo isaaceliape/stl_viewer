@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { generateThumbnail } from './ModelViewer';
-import { ModelInfo } from '../types/electron';
+import { ModelInfo, UserPreferences } from '../types/electron';
 import './ModelGrid.css';
 
 interface ModelGridProps {
@@ -9,6 +9,7 @@ interface ModelGridProps {
   onSelectModel: (model: ModelInfo | null) => void;
   loading: boolean;
   gridView: boolean;
+  preferences: UserPreferences;
 }
 
 interface ThumbnailState {
@@ -19,7 +20,7 @@ interface LoadingThumbnailState {
   [path: string]: boolean;
 }
 
-function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView }: ModelGridProps) {
+function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView, preferences }: ModelGridProps) {
   const [thumbnails, setThumbnails] = useState<ThumbnailState>({});
 
   const formatFileSize = (bytes?: number): string => {
@@ -51,6 +52,13 @@ function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView }: 
   const thumbnailQueueRef = useRef<ModelInfo[]>([]);
   const processingRef = useRef<boolean>(false);
 
+  const thumbnailVariant = `${preferences.thumbnailBackgroundColor}-${preferences.modelColor}-${preferences.thumbnailZoom}`;
+
+  useEffect(() => {
+    setThumbnails({});
+    thumbnailQueueRef.current = [];
+  }, [thumbnailVariant]);
+
   useEffect(() => {
     // Queue models for thumbnail processing (check cache first)
     const newModels = models.filter(m => !thumbnails[m.path] && !loadingThumbnails[m.path]);
@@ -58,7 +66,7 @@ function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView }: 
       thumbnailQueueRef.current = [...thumbnailQueueRef.current, ...newModels];
       processThumbnailQueue();
     }
-  }, [models]);
+  }, [models, thumbnails, loadingThumbnails, thumbnailVariant]);
 
   const processThumbnailQueue = async (): Promise<void> => {
     if (processingRef.current) return;
@@ -72,18 +80,18 @@ function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView }: 
       
       try {
         // First, check if thumbnail is cached
-        const cachedThumbnail = await window.electronAPI.getThumbnailCache(model.path);
+        const cachedThumbnail = await window.electronAPI.getThumbnailCache(model.path, thumbnailVariant);
         
         if (cachedThumbnail) {
           // Use cached thumbnail
           setThumbnails(prev => ({ ...prev, [model.path]: cachedThumbnail }));
         } else {
           // Generate new thumbnail
-          const thumbnailUrl = await generateThumbnail(model.path, model.ext);
+          const thumbnailUrl = await generateThumbnail(model.path, model.ext, preferences);
           
           if (thumbnailUrl) {
             // Save to cache
-            await window.electronAPI.saveThumbnailCache(model.path, thumbnailUrl);
+            await window.electronAPI.saveThumbnailCache(model.path, thumbnailUrl, thumbnailVariant);
             // Display thumbnail
             setThumbnails(prev => ({ ...prev, [model.path]: thumbnailUrl }));
           }
@@ -113,7 +121,7 @@ function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView }: 
           <p className="empty-hint">Click "📁 Change Folder" to browse</p>
         </div>
       ) : (
-        <div className={`grid-items ${gridView ? 'grid-view' : 'list-view'}`}>
+        <div className={`grid-items ${gridView ? 'grid-view' : 'list-view'} density-${preferences.cardDensity}`}>
           {models.map((model, index) => (
             <div
               key={index}
