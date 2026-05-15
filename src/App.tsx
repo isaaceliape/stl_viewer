@@ -310,7 +310,12 @@ function App() {
             <ModelGrid
               models={sortedModels}
               selectedModel={selectedModel}
-              onSelectModel={setSelectedModel}
+              onSelectModel={(model) => {
+                setSelectedModel(model);
+                if (model && !preferences.viewerVisible) {
+                  savePreferences({ viewerVisible: true });
+                }
+              }}
               loading={loading}
               gridView={gridView}
               preferences={preferences}
