@@ -14,6 +14,9 @@ import {
   faTimes,
   faSortAmountUp,
   faSortAmountDown,
+  faFont,
+  faWeightHanging,
+  faCalendarAlt,
 } from '@fortawesome/free-solid-svg-icons';
 
 interface ModelGridProps {
@@ -38,23 +41,29 @@ interface LoadingThumbnailState {
 
 type FilterExt = '.stl' | '.3mf';
 
+const SORT_PILLS: { value: 'name' | 'size' | 'modified'; label: string; icon: typeof faFont }[] = [
+  { value: 'name',     label: 'Name',    icon: faFont },
+  { value: 'size',     label: 'Size',    icon: faWeightHanging },
+  { value: 'modified', label: 'Date',    icon: faCalendarAlt },
+];
+
 function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView, preferences, onSortChange, onToggleSortOrder, onToggleGridView }: ModelGridProps) {
   const [thumbnails, setThumbnails] = useState<ThumbnailState>({});
   const [activeFilters, setActiveFilters] = useState<Set<FilterExt>>(new Set());
 
-  // Derive available extensions from the current model list
   const availableExts = Array.from(new Set(models.map(m => m.ext))) as FilterExt[];
 
   const toggleFilter = (ext: FilterExt) => {
     setActiveFilters(prev => {
       const next = new Set(prev);
-      if (next.has(ext)) next.delete(ext);
-      else next.add(ext);
+      if (next.has(ext)) next.delete(ext); else next.add(ext);
       return next;
     });
   };
 
   const clearFilters = () => setActiveFilters(new Set());
+
+  const hasActiveFilters = activeFilters.size > 0;
 
   const filteredModels = activeFilters.size === 0
     ? models
@@ -149,25 +158,8 @@ function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView, pr
   return (
     <div className="model-grid">
       <div className="grid-header">
-        <h2>Models ({filteredModels.length}{activeFilters.size > 0 ? `/${models.length}` : ''})</h2>
+        <h2>Models ({filteredModels.length}{hasActiveFilters ? `/${models.length}` : ''})</h2>
         <div className="grid-header-controls">
-          <select
-            value={preferences.sortBy}
-            onChange={(e) => onSortChange(e.target.value as 'name' | 'size' | 'modified')}
-            className="sort-select"
-            title="Sort by"
-          >
-            <option value="name">Name (A-Z)</option>
-            <option value="size">Size (Largest)</option>
-            <option value="modified">Date (Newest)</option>
-          </select>
-          <button
-            onClick={onToggleSortOrder}
-            className="sort-order-btn"
-            title={preferences.sortOrder === 'asc' ? 'Ascending — click for descending' : 'Descending — click for ascending'}
-          >
-            <FontAwesomeIcon icon={preferences.sortOrder === 'asc' ? faSortAmountUp : faSortAmountDown} />
-          </button>
           <button
             onClick={onToggleGridView}
             className={`view-toggle-btn ${gridView ? 'active' : ''}`}
@@ -178,25 +170,55 @@ function ModelGrid({ models, selectedModel, onSelectModel, loading, gridView, pr
         </div>
       </div>
 
-      {availableExts.length > 1 && (
-        <div className="filter-pills-row">
-          {availableExts.map(ext => (
-            <button
-              key={ext}
-              className={`filter-pill ${activeFilters.has(ext) ? 'active' : ''}`}
-              onClick={() => toggleFilter(ext)}
-            >
-              <FontAwesomeIcon icon={ext === '.stl' ? faCube : faPalette} />
-              {ext.toUpperCase().replace('.', '')}
-            </button>
-          ))}
-          {activeFilters.size > 0 && (
-            <button className="filter-pill filter-pill-clear" onClick={clearFilters} title="Clear filters">
-              <FontAwesomeIcon icon={faTimes} /> Clear
-            </button>
-          )}
-        </div>
-      )}
+      <div className="filter-pills-row">
+        {/* Sort field pills */}
+        <span className="pills-label">Sort</span>
+        {SORT_PILLS.map(pill => (
+          <button
+            key={pill.value}
+            className={`filter-pill ${preferences.sortBy === pill.value ? 'active' : ''}`}
+            onClick={() => onSortChange(pill.value)}
+          >
+            <FontAwesomeIcon icon={pill.icon} />
+            {pill.label}
+          </button>
+        ))}
+
+        {/* Sort order toggle */}
+        <button
+          className="filter-pill sort-order-pill"
+          onClick={onToggleSortOrder}
+          title={preferences.sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+        >
+          <FontAwesomeIcon icon={preferences.sortOrder === 'asc' ? faSortAmountUp : faSortAmountDown} />
+          {preferences.sortOrder === 'asc' ? 'Asc' : 'Desc'}
+        </button>
+
+        {/* Type filter pills — only when both types exist */}
+        {availableExts.length > 1 && (
+          <>
+            <span className="pills-divider" />
+            <span className="pills-label">Type</span>
+            {availableExts.map(ext => (
+              <button
+                key={ext}
+                className={`filter-pill ${activeFilters.has(ext) ? 'active' : ''}`}
+                onClick={() => toggleFilter(ext)}
+              >
+                <FontAwesomeIcon icon={ext === '.stl' ? faCube : faPalette} />
+                {ext.toUpperCase().replace('.', '')}
+              </button>
+            ))}
+          </>
+        )}
+
+        {/* Clear type filters */}
+        {hasActiveFilters && (
+          <button className="filter-pill filter-pill-clear" onClick={clearFilters} title="Clear type filters">
+            <FontAwesomeIcon icon={faTimes} /> Clear
+          </button>
+        )}
+      </div>
 
       {filteredModels.length === 0 && !loading ? (
         <div className="empty-state">
